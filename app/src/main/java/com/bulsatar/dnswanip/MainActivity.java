@@ -5,14 +5,27 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -20,12 +33,14 @@ public class MainActivity extends ActionBarActivity {
 
     TextView tv;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         tv = (TextView) findViewById(R.id.tvHTMLDisplay);
+
     }
 
 
@@ -33,73 +48,81 @@ public class MainActivity extends ActionBarActivity {
     public  void GetHTML(View view) {
         if(isConnected()){
             ProcessURL process = new ProcessURL();
-            Intent processIntent = new Intent(this,ProcessURL.class);
-
-            startActivityForResult(processIntent,1);
-
-            String myURL = process.MyURL;
-            tv.setText(process.MyURL);
-            Uri uri = Uri.parse(myURL);
-            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-            startActivity(intent);
+            process.execute("https://www.dropbox.com/s/hg0b12h4yo7yh6x/wanip.txt?dl=0?raw=1");
         }
 
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    private class ProcessURL extends AsyncTask<String, Void, String> {
 
+
+
+        @Override
+        protected String doInBackground(String... params) {
+            return GET(params[0]);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            String ssid = wifiInfo.getSSID();
+            String homessid = "\"Soun-Router\"";
+
+            if (ssid.equalsIgnoreCase(homessid)){
+                result = "192.168.1.106";
+            }
+
+            String newURL = "http://"+result+":8080";
+            tv.setText(newURL);
+            Uri uri = Uri.parse(newURL);
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            startActivity(intent);
+        }
+
+
+
+        private  String GET(String url){
+            InputStream inputStream = null;
+            String result = "";
+            try {
+
+                // create HttpClient
+                HttpClient httpclient = new DefaultHttpClient();
+
+                // make GET request to the given URL
+                HttpResponse httpResponse = httpclient.execute(new HttpGet(url));
+
+                // receive response as inputStream
+                inputStream = httpResponse.getEntity().getContent();
+
+                // convert inputstream to string
+                if(inputStream != null)
+                    result = convertInputStreamToString(inputStream);
+                else
+                    result = "Did not work!";
+
+            } catch (Exception e) {
+                Log.d("InputStream", e.getLocalizedMessage());
+            }
+
+            return result;
+        }
+
+        private String convertInputStreamToString(InputStream inputStream) throws IOException {
+            BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+            String line = "";
+            String result = "";
+            while((line = bufferedReader.readLine()) != null)
+                result += line;
+
+            inputStream.close();
+            return result;
+
+        }
     }
 
-    //
 
-    //private class HttpAsyncTask extends AsyncTask<String, Void, String> {
-
-    //@Override
-
-    //protected String doInBackground(String... urls) {
-
-    //
-
-    //return GET(urls[0]);
-
-    //}
-
-    //// onPostExecute displays the results of the AsyncTask.
-
-    //@Override
-
-    //protected void onPostExecute(String result) {
-
-    //WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-
-    //WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-
-    //String ssid = wifiInfo.getSSID();
-
-    //String homessid = "\"Soun-Router\"";
-
-    //
-
-    //if (ssid.equalsIgnoreCase(homessid)){
-
-    //result = "192.168.1.106";
-
-    //}
-
-    //String newURL = "http://"+result+":8080";
-
-    //tv.setText(newURL);
-
-    //Uri uri = Uri.parse(newURL);
-
-    //Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-
-    //startActivity(intent);
-
-    //}
-
-    //}
 
     public boolean isConnected(){
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(this.CONNECTIVITY_SERVICE);
