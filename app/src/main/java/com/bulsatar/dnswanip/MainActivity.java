@@ -48,7 +48,7 @@ public class MainActivity extends ActionBarActivity {
     public  void GetHTML(View view) {
         if(isConnected()){
             ProcessURL process = new ProcessURL();
-            process.execute("https://www.dropbox.com/s/hg0b12h4yo7yh6x/wanip.txt?dl=0?raw=1");
+            process.execute("https://www.dropbox.com/s/hg0b12h4yo7yh6x/wanip.txt?raw=1");
         }
 
     }

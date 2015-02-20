@@ -39,39 +39,36 @@ public class SingleClickWanIP extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them
-        Log.d(TAG,"started update: " + myURL);
-        WifiManager wifiManager = (WifiManager)  context.getSystemService(WIFI_SERVICE);
-        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        String ssid = wifiInfo.getSSID();
-        String homessid = "\"Soun-Router\"";
-
-        if (ssid.equalsIgnoreCase(homessid)){
-            myURL = "192.168.1.106";
-        }
-        Log.d(TAG,"finished ssd check: " + myURL);
-        String newURL = "http://"+myURL+":8080";
-        Uri uri = Uri.parse(newURL);
-        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.single_click_wan_ip);
-        Log.d(TAG,"finished intent and remote views: " + newURL);
-        views.setOnClickPendingIntent(R.id.ibOrange, pendingIntent);
-        Log.d(TAG,"finished on click pending: " + newURL);
 
+        if(myURL != null) {
+            Log.d(TAG, "started update: " + myURL);
+
+            Uri uri = Uri.parse(myURL);
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+            Log.d(TAG, "finished intent and remote views: " + myURL);
+            views.setOnClickPendingIntent(R.id.ibOrange, pendingIntent);
+            Log.d(TAG, "finished on click pending: " + myURL);
+        }
         final int N = appWidgetIds.length;
         for (int i = 0; i < N; i++) {
-            updateAppWidget(context, appWidgetManager, appWidgetIds[i]);
+            appWidgetManager.updateAppWidget(appWidgetIds[i],views);
         }
-        Log.d(TAG,"finished onUpdate: " + newURL);
+
+
+
+
     }
-
-
+//    todo: move dropbox link to preferences.  save urls there also, one away and one home
+//    that way can move the async off of the widget and just force open the app and reset settings
 
     @Override
     public void onEnabled(Context context) {
         Log.d(TAG,"onEnabled: " + myURL);
-        ProcessURL process = new ProcessURL(context);
+        ProcessURL process = new ProcessURL(context,AppWidgetManager.getInstance(context));
         process.execute("https://www.dropbox.com/s/hg0b12h4yo7yh6x/wanip.txt?raw=1");
         Log.d(TAG,"started process: " + myURL);
 
@@ -82,27 +79,47 @@ public class SingleClickWanIP extends AppWidgetProvider {
     private class ProcessURL extends AsyncTask<String, Void, String> {
 
         private Context gContext;
-        public ProcessURL(Context context) {
+        private AppWidgetManager gappWidgetManager;
+        private RemoteViews views;
+
+        public ProcessURL(Context context, AppWidgetManager pappWidgetManager) {
             this.gContext = context;
+            this.gappWidgetManager = pappWidgetManager;
         }
 
         @Override
         protected String doInBackground(String... params) {
             Log.d(TAG,"started background");
+            views = new RemoteViews(gContext.getPackageName(), R.layout.single_click_wan_ip);
             return GET(params[0]);
         }
 
         @Override
         protected void onPostExecute(String result) {
-            myURL = result;
 
-            AppWidgetManager widgetManager = AppWidgetManager.getInstance(gContext);
-            ComponentName widgetComponent = new ComponentName(gContext, SingleClickWanIP.class);
-            int[] widgetIds = widgetManager.getAppWidgetIds(widgetComponent);
-            Intent update = new Intent();
-            update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds);
-            update.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            gContext.sendBroadcast(update);
+            WifiManager wifiManager = (WifiManager) gContext.getSystemService(WIFI_SERVICE);
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            String ssid = wifiInfo.getSSID();
+            String homessid = "\"Soun-Router\"";
+
+            if (ssid.equalsIgnoreCase(homessid)) {
+                result = "192.168.1.106";
+            }
+            Log.d(TAG, "finished ssd check: " + result);
+            myURL = "http://" + result + ":8080";
+
+            Uri uri = Uri.parse(myURL);
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(gContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            RemoteViews views = new RemoteViews(gContext.getPackageName(), R.layout.single_click_wan_ip);
+            Log.d(TAG, "finished intent and remote views: " + myURL);
+            views.setOnClickPendingIntent(R.id.ibOrange, pendingIntent);
+            Log.d(TAG, "finished on click pending: " + myURL);
+
+            ComponentName thisWidget = new ComponentName(gContext, SingleClickWanIP.class);
+            gappWidgetManager.updateAppWidget(thisWidget, views);
+
             Log.d(TAG,"finished and set myURL variable: " + myURL);
         }
 
@@ -155,15 +172,15 @@ public class SingleClickWanIP extends AppWidgetProvider {
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
-        //
-        //CharSequence widgetText = context.getString(R.string.appwidget_text);
-        //// Construct the RemoteViews object
-        //RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.single_click_wan_ip);
-        //views.setTextViewText(R.id.appwidget_text, widgetText);
-        //
-        //// Instruct the widget manager to update the widget
-        //appWidgetManager.updateAppWidget(appWidgetId, views);
-        //
+
+//        CharSequence widgetText = context.getString(R.string.appwidget_text);
+//        // Construct the RemoteViews object
+//        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.single_click_wan_ip);
+//        views.setTextViewText(R.id.ibOrange, widgetText);
+//
+//        // Instruct the widget manager to update the widget
+//        appWidgetManager.updateAppWidget(appWidgetId, views);
+
     }
 
 
