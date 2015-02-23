@@ -8,5 +8,15 @@
     <string name="add_widget">Add widget</string>
     <string name="btnContDesc">LilOrangeBtn</string>
     <string name="contdesc">click to my server</string>
+    <string name="txtdelete">Delete</string>
+    <string name="txtcancel">Cancel</string>
+    <string name="txtsave">Save</string>
+    <string name="txtnew">New</string>
+    <string name="txthttps">Use HTTPS</string>
+    <string name="txtgenname">Your name for link</string>
+    <string name="txtport">Port number for link</string>
+    <string name="txtlink">Enter link that provides IP</string>
+    <string name="settingdesc">Settings button</string>
+    <string name="title_activity_main_activity2">MainActivity2</string>
 
 </resources>

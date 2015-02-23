@@ -1,6 +1,9 @@
 package com.bulsatar.dnswanip;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -8,6 +11,7 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 
@@ -15,7 +19,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -26,36 +36,110 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Map;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends Activity implements  AdapterView.OnItemSelectedListener{ //View.OnClickListener,
     private static final String TAG = "waninfo";
 
-    TextView tv;
+    EditText metIP;
+    EditText metPort;
+    EditText metGenName;
+    CheckBox mchkHTTPS;
+    Map<String, ?> ipList;
 
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    protected void onCreate(Bundle savedInstance){
+        super.onCreate(savedInstance);
+        setContentView(R.layout.server_info_input);
 
-        tv = (TextView) findViewById(R.id.tvHTMLDisplay);
+        //get views to easily set info
+        metIP = (EditText) findViewById(R.id.etLink);
+        metPort = (EditText) findViewById(R.id.etPort);
+        metGenName = (EditText) findViewById(R.id.etGenName);
+        mchkHTTPS = (CheckBox) findViewById(R.id.chkHTTPS);
+        //---------------------------------------------
+        populateSpinner();
+
+    }
+    private  void populateSpinner(){
+        //grab where we store the ip addresses and generic names and populate spinner selector
+
+        SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        ipList = mPrefs.getAll();
+        ArrayList genNameList = new ArrayList();
+        genNameList.add("Fill in for new or touch and select to edit");
+
+        for (Map.Entry<String, ?> entry : ipList.entrySet()) {
+            genNameList.add(entry.getKey());
+        }
+
+        //get choice selection
+        Spinner sp = (Spinner) findViewById(R.id.spIPListMain);
+        sp.setOnItemSelectedListener(this);
+        ArrayAdapter adapter = new ArrayAdapter(this,android.R.layout.simple_spinner_item, genNameList);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        sp.setAdapter(adapter);
 
     }
 
+    public void handlesCancel(View v){
+        finish();
+    }
+
+    public  void handlesSave(View v){
+        ProcessURL getDNSIP = new ProcessURL(this);
+        getDNSIP.execute(metIP.getText().toString());
 
 
-    public  void GetHTML(View view) {
-        if(isConnected()){
-            ProcessURL process = new ProcessURL();
-            process.execute("https://www.dropbox.com/s/hg0b12h4yo7yh6x/wanip.txt?raw=1");
+    }
+
+    public void handlesDelete(View v){
+        String tmpGenName = metGenName.getText().toString();
+        if(tmpGenName != null && !tmpGenName.isEmpty() ){
+            try{
+                //grab where we store the ip addresses and generic names and populate spinner selector
+                SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+                SharedPreferences.Editor edit=mPrefs.edit();
+                edit.remove(metGenName.getText().toString());
+                edit.commit();
+                populateSpinner();
+            }catch (Exception e) {
+                Log.d("InputStream", e.getLocalizedMessage());
+                String error = "Error attempting to delete item.  Please select item to delete again";
+                Toast toast = Toast.makeText(this, error, Toast.LENGTH_LONG);
+                toast.show();
+            }
+
         }
 
     }
 
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+        String newURL =(String) ipList.get( parent.getItemAtPosition(position));
+        if(newURL != null && !newURL .isEmpty() && !newURL.equalsIgnoreCase("Fill in for new or touch and select to edit")) {
+            //todo: split out selected ip and send parts to respective view
+        }
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+        //handled on save and delete
+    }
+
     private class ProcessURL extends AsyncTask<String, Void, String> {
 
+        Context mcontext;
 
+        public ProcessURL(Context context){
+            mcontext = context;
+        }
 
         @Override
         protected String doInBackground(String... params) {
@@ -64,46 +148,64 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected void onPostExecute(String result) {
-            WifiManager wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-            String ssid = wifiInfo.getSSID();
-            String homessid = "\"Soun-Router\"";
-
-            if (ssid.equalsIgnoreCase(homessid)){
-                result = "192.168.1.106";
+            //check for did not work
+            if(result.equalsIgnoreCase("Did not work!")){
+                String error = "Error retrieving wan IP.  Please ensure link only returns ipv4 address (ie. 123.45.6.78)";
+                Toast toast = Toast.makeText(mcontext, error, Toast.LENGTH_LONG);
+                toast.show();
             }
 
-            String newURL = "http://"+result+":8080";
-            tv.setText(newURL);
-            Uri uri = Uri.parse(newURL);
-            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-            startActivity(intent);
+            //grab where we store the ip addresses and generic names and populate spinner selector
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(mcontext);
+            SharedPreferences.Editor edit=mPrefs.edit();
+
+            String http = "";
+            if(mchkHTTPS.isChecked()) {
+                http = "http://";
+            }else{
+                http = "https://";
+            }
+            String port = "";
+            if(!metPort.getText().toString().isEmpty()) {
+                port = metPort.getText().toString();
+            }
+
+            edit.putString(metGenName.getText().toString(),http + result + port);
+            edit.commit();
+
+            populateSpinner();
+
         }
 
 
 
         private  String GET(String url){
             InputStream inputStream = null;
-            String result = "";
-            try {
+            String result = "Did not work!";
 
-                // create HttpClient
-                HttpClient httpclient = new DefaultHttpClient();
+            //check if string is already ip address
 
-                // make GET request to the given URL
-                HttpResponse httpResponse = httpclient.execute(new HttpGet(url));
+            //check if connected since have to connect to get wan
+            if(isConnected()) {
 
-                // receive response as inputStream
-                inputStream = httpResponse.getEntity().getContent();
+                try {
 
-                // convert inputstream to string
-                if(inputStream != null)
-                    result = convertInputStreamToString(inputStream);
-                else
-                    result = "Did not work!";
+                    // create HttpClient
+                    HttpClient httpclient = new DefaultHttpClient();
 
-            } catch (Exception e) {
-                Log.d("InputStream", e.getLocalizedMessage());
+                    // make GET request to the given URL
+                    HttpResponse httpResponse = httpclient.execute(new HttpGet(url));
+
+                    // receive response as inputStream
+                    inputStream = httpResponse.getEntity().getContent();
+
+                    // convert inputstream to string
+                    if (inputStream != null) {
+                        result = convertInputStreamToString(inputStream);
+                    }
+                } catch (Exception e) {
+                    Log.d("InputStream", e.getLocalizedMessage());
+                }
             }
 
             return result;

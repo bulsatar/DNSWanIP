@@ -20,8 +20,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".IPSelection"
+            android:label="DNSWanIP" >
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
 
-        <receiver android:name="SingleClickWanIP" >
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".SingleClickWanIP" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -30,6 +39,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/single_click_wan_ip_info" />
         </receiver>
+
+        <activity
+            android:name=".MainActivity2"
+            android:label="@string/title_activity_main_activity2" >
+        </activity>
     </application>
 
 </manifest>
