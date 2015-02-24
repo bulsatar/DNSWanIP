@@ -2,26 +2,29 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
               android:layout_width="match_parent"
-              android:layout_height="match_parent">
+              android:layout_height="match_parent"
+              android:background="@android:color/transparent">
 
     <Spinner
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/spIPListMain"/>
+        android:layout_height="50dp"
+        android:id="@+id/spIPListMain"
+        android:background="@color/material_deep_teal_200"/>
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/etLink"
-        android:text="@string/txtlink"
+        android:hint="@string/txtlink"
         android:linksClickable="false"
-        android:inputType="text"/>
+        android:inputType="text"
+        />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/etPort"
-        android:text="@string/txtport"
+        android:hint="@string/txtport"
         android:linksClickable="false"
         android:inputType="text"/>
 
@@ -29,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/etGenName"
-        android:text="@string/txtgenname"
+        android:hint="@string/txtgenname"
         android:linksClickable="false"
         android:layout_gravity="right"
         android:inputType="text"/>
@@ -38,7 +41,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/txthttps"
-        android:id="@+id/chkHTTPS"/>
+        android:id="@+id/chkHTTPS"
+        />
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:id="@+id/tvFullIP"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -52,7 +62,8 @@
             android:id="@+id/btnCancel"
             android:clickable="true"
             android:enabled="true"
-            android:onClick="handlesCancel"/>
+            android:onClick="handlesCancel"
+            android:background="@color/material_deep_teal_200"/>
 
         <Space
             android:layout_width="wrap_content"
@@ -66,7 +77,8 @@
             android:id="@+id/btnDelete"
             android:onClick="handlesDelete"
             android:enabled="true"
-            android:clickable="true"/>
+            android:clickable="true"
+            android:background="@color/material_deep_teal_200"/>
 
 
         <Space
@@ -81,18 +93,8 @@
             android:id="@+id/spIPlist"
             android:clickable="true"
             android:enabled="true"
-            android:onClick="handlesSave"/>
+            android:onClick="handlesSave"
+            android:background="@color/material_deep_teal_200"/>
 
     </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        >
-        <ProgressBar
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/progressBar"
-            android:layout_gravity="bottom"/>
-        </LinearLayout>
 </LinearLayout>

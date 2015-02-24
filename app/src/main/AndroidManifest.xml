@@ -22,7 +22,8 @@
         </activity>
         <activity
             android:name=".IPSelection"
-            android:label="DNSWanIP" >
+            android:label="DNSWanIP"
+            android:theme="@android:style/Theme.Dialog">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -40,10 +41,7 @@
                 android:resource="@xml/single_click_wan_ip_info" />
         </receiver>
 
-        <activity
-            android:name=".MainActivity2"
-            android:label="@string/title_activity_main_activity2" >
-        </activity>
+
     </application>
 
 </manifest>

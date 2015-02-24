@@ -1,6 +1,7 @@
 package com.bulsatar.dnswanip;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -23,6 +24,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 
 
@@ -47,7 +50,8 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
     EditText metPort;
     EditText metGenName;
     CheckBox mchkHTTPS;
-    Map<String, ?> ipList;
+    TextView mtvIP;
+
 
 
     @Override
@@ -60,6 +64,7 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
         metPort = (EditText) findViewById(R.id.etPort);
         metGenName = (EditText) findViewById(R.id.etGenName);
         mchkHTTPS = (CheckBox) findViewById(R.id.chkHTTPS);
+        mtvIP = (TextView) findViewById(R.id.tvFullIP);
         //---------------------------------------------
         populateSpinner();
 
@@ -68,7 +73,7 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
         //grab where we store the ip addresses and generic names and populate spinner selector
 
         SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-        ipList = mPrefs.getAll();
+        Map<String, ?> ipList = mPrefs.getAll();
         ArrayList genNameList = new ArrayList();
         genNameList.add("Fill in for new or touch and select to edit");
 
@@ -84,6 +89,15 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
 
         sp.setAdapter(adapter);
 
+        clearViews();
+
+    }
+
+    private void clearViews(){
+        metGenName.setText("");
+        metIP.setText("");
+        metPort.setText("");
+        mtvIP.setText("");
     }
 
     public void handlesCancel(View v){
@@ -101,11 +115,8 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
         String tmpGenName = metGenName.getText().toString();
         if(tmpGenName != null && !tmpGenName.isEmpty() ){
             try{
-                //grab where we store the ip addresses and generic names and populate spinner selector
-                SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-                SharedPreferences.Editor edit=mPrefs.edit();
-                edit.remove(metGenName.getText().toString());
-                edit.commit();
+                ManagePrefs mp = new ManagePrefs(this);
+                mp.deleteSet(tmpGenName);
                 populateSpinner();
             }catch (Exception e) {
                 Log.d("InputStream", e.getLocalizedMessage());
@@ -121,10 +132,16 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-        String newURL =(String) ipList.get( parent.getItemAtPosition(position));
-        if(newURL != null && !newURL .isEmpty() && !newURL.equalsIgnoreCase("Fill in for new or touch and select to edit")) {
-            //todo: split out selected ip and send parts to respective view
+        clearViews();
+        String sName = (String) parent.getItemAtPosition(position);
+        if(sName != null && !sName .isEmpty() && !sName.equalsIgnoreCase("Fill in for new or touch and select to edit")) {
+            ManagePrefs mp = new ManagePrefs(this);
+            ManagePrefs.WanSet ws = mp.getPropsFromPrefs(sName);
+            metIP.setText(ws.WanLink);
+            metPort.setText(ws.PortNum);
+            mchkHTTPS.setChecked(ws.UseHTTPS);
+            metGenName.setText(ws.GenericName);
+            mtvIP.setText(ws.FullIP);
         }
     }
 
@@ -136,9 +153,16 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
     private class ProcessURL extends AsyncTask<String, Void, String> {
 
         Context mcontext;
+        ProgressDialog pd;
 
         public ProcessURL(Context context){
             mcontext = context;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            pd = ProgressDialog.show(mcontext, "Wait", "Downloading...");
         }
 
         @Override
@@ -148,21 +172,17 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
 
         @Override
         protected void onPostExecute(String result) {
+            pd.dismiss();
             //check for did not work
             if(result.equalsIgnoreCase("Did not work!")){
-                String error = "Error retrieving wan IP.  Please ensure link only returns ipv4 address (ie. 123.45.6.78)";
+                String error = "Error retrieving wan IP.  Please ensure link only returns ip address (ie. 123.45.6.78)";
                 Toast toast = Toast.makeText(mcontext, error, Toast.LENGTH_LONG);
                 toast.show();
             }
 
-            //grab where we store the ip addresses and generic names and populate spinner selector
-            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(mcontext);
-            SharedPreferences.Editor edit=mPrefs.edit();
 
-            String http = "";
+            String http = "http://";
             if(mchkHTTPS.isChecked()) {
-                http = "http://";
-            }else{
                 http = "https://";
             }
             String port = "";
@@ -170,10 +190,16 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
                 port = metPort.getText().toString();
             }
 
-            edit.putString(metGenName.getText().toString(),http + result + port);
-            edit.commit();
+            ManagePrefs mp = new ManagePrefs(mcontext);
+            String fullIP = http+result+":"+port;
+
+            mp.setPrefsFromProps(metIP. getText().toString(), fullIP, port, metGenName.getText().toString(), mchkHTTPS.isChecked());
 
             populateSpinner();
+
+            String error = "Information saved.  Full IP is \n" + fullIP + "\nand is now available to the widget";
+            Toast toast = Toast.makeText(mcontext, error, Toast.LENGTH_LONG);
+            toast.show();
 
         }
 
@@ -184,6 +210,9 @@ public class MainActivity extends Activity implements  AdapterView.OnItemSelecte
             String result = "Did not work!";
 
             //check if string is already ip address
+            IPUtilities ipu = new IPUtilities();
+            if(ipu.isIpAddress(url))
+                return url;
 
             //check if connected since have to connect to get wan
             if(isConnected()) {
